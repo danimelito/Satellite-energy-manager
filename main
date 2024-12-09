@@ -1,0 +1,96 @@
+import time
+import random
+import matplotlib.pyplot as plt
+
+class SatelliteEnergyManager:
+    def __init__(self, battery_capacity, motor_consumption, base_panel_generation):
+        self.battery_capacity = battery_capacity  # Capacidad total de la batería (Wh)
+        self.battery_level = battery_capacity * 0.5  # Nivel inicial (50%)
+        self.motor_consumption = motor_consumption  # Consumo del motor (W) 
+        self.base_panel_generation = base_panel_generation  # Generación base del panel solar (W)
+        self.panel_generation = base_panel_generation  # Generación actual (W)
+        self.mode = "idle"  # Modo inicial: idle (sin uso)
+
+    def update_battery(self, time_interval):
+        if self.mode == "plasma_motor":
+            self.battery_level -= self.motor_consumption * time_interval
+        elif self.mode == "solar_charging":
+            self.battery_level += self.panel_generation * time_interval
+
+        # Limitar el nivel de la batería a su capacidad máxima/mínima
+        self.battery_level = max(0, min(self.battery_level, self.battery_capacity))
+
+    def switch_mode(self):
+        if self.battery_level < self.battery_capacity * 0.3:
+            self.mode = "solar_charging"
+        elif self.battery_level > self.battery_capacity * 0.7:
+            self.mode = "plasma_motor"
+        else:
+            self.mode = "idle"
+
+    def simulate(self, duration, time_step):
+        time_points = []
+        battery_levels = []
+        modes = []
+
+        for t in range(0, duration, time_step):
+            # Simular fluctuaciones en la generación solar
+            self.panel_generation = self.base_panel_generation * random.uniform(0.8, 1.2)
+
+            # Cambiar modo y actualizar batería
+            self.switch_mode()
+            self.update_battery(time_step / 3600)  # Convertir segundos a horas
+
+            # Alertas de batería crítica
+            if self.battery_level < self.battery_capacity * 0.1:
+                print(f"Alerta: Batería crítica en t={t} s, nivel={self.battery_level:.2f} Wh")
+
+            # Imprimir estado en la consola
+            print(f"Time: {t}s - Battery Level: {self.battery_level:.2f} Wh - Mode: {self.mode}")
+
+            # Guardar datos para graficar
+            time_points.append(t)
+            battery_levels.append(self.battery_level)
+            modes.append(self.mode)
+
+            # Simular tiempo real (opcional para pruebas)
+            time.sleep(0.1)
+
+        self.plot_results(time_points, battery_levels, modes)
+
+    def plot_results(self, time_points, battery_levels, modes):
+        plt.figure(figsize=(12, 8))
+
+        # Gráfica del nivel de batería
+        plt.subplot(2, 1, 1)
+        plt.plot(time_points, battery_levels, label="Nivel de batería (Wh)", color="blue")
+        plt.axhline(self.battery_capacity * 0.3, color="red", linestyle="--", label="Límite bajo (30%)")
+        plt.axhline(self.battery_capacity * 0.7, color="green", linestyle="--", label="Límite alto (70%)")
+        plt.xlabel("Tiempo (s)")
+        plt.ylabel("Nivel de batería (Wh)")
+        plt.title("Simulación de Gestión de Energía del Satélite")
+        plt.legend()
+        plt.grid()
+
+        # Gráfica de modos de operación
+        plt.subplot(2, 1, 2)
+        mode_colors = {"idle": "gray", "plasma_motor": "red", "solar_charging": "green"}
+        mode_numeric = [1 if mode == "plasma_motor" else (2 if mode == "solar_charging" else 0) for mode in modes]
+        plt.plot(time_points, mode_numeric, drawstyle="steps-post", label="Modo de operación", color="orange")
+        plt.yticks([0, 1, 2], ["Idle", "Plasma Motor", "Solar Charging"])
+        plt.xlabel("Tiempo (s)")
+        plt.ylabel("Modo de operación")
+        plt.grid()
+
+        plt.tight_layout()
+        plt.show()
+
+# Parámetros del sistema
+battery_capacity = 1000  # Wh
+motor_consumption = 200  # W
+base_panel_generation = 150  # W
+
+# Crear y simular
+manager = SatelliteEnergyManager(battery_capacity, motor_consumption, base_panel_generation)
+manager.simulate(duration=3600, time_step=60)  # Simular por 1 hora con pasos de 1 minuto
+
